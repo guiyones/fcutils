@@ -3,6 +3,7 @@ package events
 import (
 	"errors"
 	"slices"
+	"sync"
 )
 
 var ErrHandlerAlreadyRegistered error = errors.New("handler already registered")
@@ -22,11 +23,13 @@ func NewEventDispatcher() *EventDispatcher {
 // Vai pegar o Handler que foi registrado e executar o metodo Handle passando o evento que foi chamado
 func (ed *EventDispatcher) Dispatch(event EventInterface) error {
 	if handlers, ok := ed.handlers[event.GetName()]; ok {
+		wg := &sync.WaitGroup{}
 		for _, handler := range handlers {
-			handler.Handle(event)
+			wg.Add(1)
+			go handler.Handle(event, wg)
 		}
+		wg.Wait()
 	}
-
 	return nil
 }
 
@@ -63,7 +66,6 @@ func (ed *EventDispatcher) Remove(eventName string, handler EventHandlerInterfac
 			}
 		}
 	}
-
 	return nil
 }
 
